@@ -1,0 +1,43 @@
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX kwg-ont: <http://stko-kwg.geog.ucsb.edu/lod/ontology/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX geosparql: <http://www.opengis.net/ont/geosparql#>
+PREFIX time: <http://www.w3.org/2006/time#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+SELECT DISTINCT ?mudslide_id ?mudslide_description ?mudslide_date ?mudslide_geometry ?fire_event ?fire_description ?fire_start_date ?fire_end_date ?fire_geometry (group_concat(DISTINCT ?fire_date;separator=",") as ?fire_year)
+WHERE {
+    ?mudslide_id rdf:type kwg-ont:NOAADebrisFlow .
+    ?mudslide_id kwg-ont:sfWithin ?mudslide_area .
+    ?mudslide_id kwg-ont:hasTemporalScope ?mudslide_temporal_scope .
+    ?mudslide_id kwg-ont:hasNarrative ?mudslide_description .
+    ?mudslide_id geosparql:hasGeometry ?mudslide_geometry_node .
+    ?mudslide_geometry_node geosparql:asWKT	?mudslide_geometry .
+
+    ?mudslide_temporal_scope rdf:type time:Instant .
+	  ?mudslide_temporal_scope time:inXSDDate ?mudslide_date .
+    
+    ?fire_event kwg-ont:sfWithin ?mudslide_area .
+    ?fire_event rdf:type kwg-ont:Fire .
+	  ?fire_event kwg-ont:hasTemporalScope ?fire_temporal_scope .
+    ?fire_event geosparql:hasGeometry ?fire_geometry_node .
+    ?fire_geometry_node geosparql:asWKT	?fire_geometry .
+    OPTIONAL {
+        ?fire_event rdfs:label ?fire_description .
+    }
+    # Some fires only have time:Instant
+    OPTIONAL {
+        ?fire_temporal_scope rdf:type time:Instant .
+        ?fire_temporal_scope time:inXSDgYear ?fire_date .
+    }
+    
+    # Other fires have time:Interval dates
+    OPTIONAL {
+        ?fire_temporal_scope rdf:type time:Interval .
+        ?fire_temporal_scope time:hasBeginning ?fire_start .
+        ?fire_start time:inXSDDate ?fire_start_date .
+        ?fire_temporal_scope time:hasEnd ?fire_end .
+        ?fire_end time:inXSDDate ?fire_end_date .
+    }
+    
+} GROUP BY ?mudslide_id ?mudslide_description ?mudslide_date ?mudslide_geometry ?fire_event ?fire_description ?fire_start_date ?fire_end_date ?fire_geometry LIMIT 100 OFFSET 0
